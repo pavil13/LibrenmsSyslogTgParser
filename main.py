@@ -1,55 +1,76 @@
+import datetime
 from pyrogram import Client
 
-message_len = 500 # max message value
-telegram_chat_id = -1001487535356 # insert Telegram Chat id value 
-
-api_id = 1234567 # insert you api_id value 
+api_id = 1212121  # insert you api_id value 
 api_hash = "api_hash" # insert you api_hash value 
+channel_id = -12121212121 # insert you Telegram channel_id value 
 
-def counter_message():
+
+def main():
     with Client("my_account", api_id, api_hash) as app:
 
-        date_message_dict = {}
-        messages_list = app.get_chat_history(telegram_chat_id, message_len)
-        messages_list2 = app.get_chat_history(telegram_chat_id, message_len)
+        message_parse_quant = int(input('Введите количство сообщений, которые будут обработаны: '))
+    
+        day = input('Введите день (int, ex - 01): ')
+        month = input('Введите месяц (int, ex - 10): ')
+        year = input('Введите год (int, ex - 2024): ') 
 
-        for message in messages_list:   
-            msg_date = message.date.strftime("%d-%m-%Y")
-            date_message_dict[msg_date] = 0
+        required_date = f'{day}-{month}-{year}'
 
-        for message2 in messages_list2:
-            for key_date in date_message_dict:
-                if message2.date.strftime("%d-%m-%Y") == key_date:
-                    date_message_dict[key_date] += 1
-
-        for key in date_message_dict:
-            print(f'{key} : {date_message_dict[key]}')
-
-def counter_down_name():
-    with Client("my_account",api_id, api_hash) as app:
-
-        down_device_dict = {}
-        messages_list = app.get_chat_history(telegram_chat_id, message_len)
-        messages_list2 = app.get_chat_history(telegram_chat_id, message_len)
+        required_date_dict = {}
+        messages_list = list()
+        messages_dict = {}
+        device_down_dict = {}
 
 
-        for message in messages_list:  
-            if "Alert for device" in message.text:
+        #заполнение массивов 
+        for msg in app.get_chat_history(channel_id, message_parse_quant):
+            messages_list.append(msg)
+            messages_dict[msg.date.strftime('%d-%m-%Y')] = 0
 
-                down_device_name = message.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
-                down_device_dict[down_device_name] = 0
+            if "Alert for device " in msg.text and "UPS" not in msg.text and "Port utilisation" not in msg.text:
+                device_name = msg.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
+                device_down_dict[device_name] = 0
 
-        for message2 in messages_list2:
-            for device in down_device_dict:
-                try:
-                    down_device_name = message2.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
-                except IndexError as err:
-                    pass
-                if down_device_name == device:
-                    down_device_dict[device] += 1
+            if msg.date.strftime('%d-%m-%Y') == required_date:
+                if "Alert for device " in msg.text and "UPS" not in msg.text and "Port utilisation" not in msg.text:
+                    device_name = msg.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
+                    required_date_dict[device_name] = 0
 
-        for key in down_device_dict:
-            print(f'{key} : {down_device_dict[key]}')
+        #перебор массивов, поиск данных и заполнение счетчиков
+        for message in messages_list:
 
-counter_message()
-counter_down_name()
+            if message.date.strftime('%d-%m-%Y') in messages_dict:
+                messages_dict[message.date.strftime('%d-%m-%Y')] += 1
+
+            if "Alert for device " in message.text and "UPS" not in message.text and "Port utilisation" not in message.text:
+                device_name = message.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
+
+                if message.text.split("Alert for device ", 1)[1].split(" - Devices")[0] == device_name:
+                    device_down_dict[device_name] += 1
+
+            if message.date.strftime('%d-%m-%Y') == required_date:
+                if "Alert for device " in message.text and "UPS" not in message.text and "Port utilisation" not in message.text:
+                    device_name = message.text.split("Alert for device ", 1)[1].split(" - Devices")[0]
+                    required_date_dict[device_name] += 1
+
+        #вывод данных 
+        print(f"\nДата/общее количество сообщений (из последних {message_parse_quant}):")
+        for date in messages_dict:
+            print(f'{date}: {messages_dict[date]}')
+
+        print(f"\nНазвание/количество падений за последние {message_parse_quant} сообщений в дату - {required_date}:")
+        counter = 0
+        for device_name in required_date_dict:
+            print(f'{device_name}: {required_date_dict[device_name]}')
+            counter += required_date_dict[device_name]
+        print(f"\nОбщее кол-во: {counter}")
+
+        print(f"\nНазвание/количество падений за последние {message_parse_quant} сообщений:")
+        for device in device_down_dict:
+            print(f'{device}: {device_down_dict[device]}')
+
+
+
+if __name__ == "__main__":
+    main()
